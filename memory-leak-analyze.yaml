@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memoryleakapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memoryleakapi
+  template:
+    metadata:
+      labels:
+        app: memoryleakapi
+    spec:
+      shareProcessNamespace: true
+      containers:
+      - name: memoryleakapiapp
+        image: loneexile/dot-leak
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: dumps
+          mountPath: /dumps
+        - name: tmp
+          mountPath: /tmp
+      - name: dot-dump
+        image: loneexile/dot-dump
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: dumps
+          mountPath: /dumps
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: dumps
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memoryleakapi
+spec:
+  selector:
+    app: memoryleakapi
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30011
+  # type: ClusterIP
+  type: NodePort
